@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import os
@@ -11,25 +12,15 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import psutil
 import tblib
 
-from openwpm.config import (
-    BrowserParams,
-    BrowserParamsInternal,
-    ManagerParams,
-    ManagerParamsInternal,
-    validate_browser_params,
-    validate_crawl_configs,
-    validate_manager_params,
-)
-
-from .browser_manager import Browser
-from .command_sequence import CommandSequence
-from .commands.utils.webdriver_utils import parse_neterror
-from .DataAggregator import S3_aggregator, base_aggregator, local_aggregator
-from .DataAggregator.base_aggregator import ACTION_TYPE_FINALIZE, RECORD_TYPE_SPECIAL
-from .errors import CommandExecutionError
+from .BrowserManager import Browser
+from .Commands.utils.webdriver_utils import parse_neterror
+from .CommandSequence import CommandSequence
+from .DataAggregator import BaseAggregator, LocalAggregator, S3Aggregator
+from .DataAggregator.BaseAggregator import ACTION_TYPE_FINALIZE, RECORD_TYPE_SPECIAL
+from .Errors import CommandExecutionError
 from .js_instrumentation import clean_js_instrumentation_settings
-from .mp_logger import MPLogger
-from .socket_interface import ClientSocket
+from .MPLogger import MPLogger
+from .SocketInterface import clientsocket
 from .utilities.multiprocess_utils import kill_process_and_children
 from .utilities.platform_utils import get_configuration_string, get_version
 
@@ -39,6 +30,30 @@ SLEEP_CONS = 0.1  # command sleep constant (in seconds)
 BROWSER_MEMORY_LIMIT = 1500  # in MB
 
 AGGREGATOR_QUEUE_LIMIT = 10000  # number of records in the queue
+MEMORY_WATCHDOG = "memory_watchdog"
+PROCESS_WATCHDOG = "process_watchdog"
+
+
+def load_default_params(
+    num_browsers: int = 1,
+) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+    """
+    Loads num_browsers copies of the default browser_params dictionary.
+    Also loads a single copy of the default TaskManager params dictionary.
+    """
+    with open(
+        os.path.join(os.path.dirname(__file__), "default_browser_params.json"), "r"
+    ) as fp:
+        preferences = json.load(fp)
+    browser_params = [copy.deepcopy(preferences) for i in range(0, num_browsers)]
+
+    with open(
+        os.path.join(os.path.dirname(__file__), "default_manager_params.json"), "r"
+    ) as fp:
+        manager_params = json.load(fp)
+    manager_params["num_browsers"] = num_browsers
+
+    return manager_params, browser_params
 
 
 class TaskManager:
@@ -53,90 +68,84 @@ class TaskManager:
 
     def __init__(
         self,
-        manager_params_temp: ManagerParams,
-        browser_params_temp: List[BrowserParams],
+        manager_params: Dict[str, Any],
+        browser_params: List[Dict[str, Any]],
         logger_kwargs: Dict[Any, Any] = {},
     ) -> None:
         """Initialize the TaskManager with browser and manager config params
 
         Parameters
         ----------
-        manager_params_temp : ManagerParams
-            TaskManager configuration parameters
-        browser_params_temp : list of BrowserParams
-            Browser configuration parameters. It is a list which
+        manager_params : dict
+            Dictionary of TaskManager configuration parameters. See the
+            default in `default_manager_params.json`.
+        browser_params : list of dict
+            Browser configuration parameters. If this is given as a list, it
             includes individual configurations for each browser.
+        process_watchdog : bool, optional
+            Set to True to monitor Firefox processes for zombie instances or
+            instances that exceed a reasonable amount of memory. Any process
+            found and not indexed by the TaskManager will be killed.
+            (Currently broken: https://github.com/mozilla/OpenWPM/issues/174)
         logger_kwargs : dict, optional
             Keyword arguments to pass to MPLogger on initialization.
         """
 
-        validate_manager_params(manager_params_temp)
-        for bp in browser_params_temp:
-            validate_browser_params(bp)
-        validate_crawl_configs(manager_params_temp, browser_params_temp)
-
-        manager_params = ManagerParamsInternal(**manager_params_temp.to_dict())
-        browser_params = [
-            BrowserParamsInternal(**bp.to_dict()) for bp in browser_params_temp
-        ]
-
         # Make paths absolute in manager_params
-        if manager_params.data_directory:
-            manager_params.data_directory = os.path.expanduser(
-                manager_params.data_directory
-            )
-        if manager_params.log_directory:
-            manager_params.log_directory = os.path.expanduser(
-                manager_params.log_directory
-            )
-
-        manager_params.database_name = os.path.join(
-            manager_params.data_directory, manager_params.database_name
+        for path in ["data_directory", "log_directory"]:
+            if manager_params[path] is not None:
+                manager_params[path] = os.path.expanduser(manager_params[path])
+        manager_params["database_name"] = os.path.join(
+            manager_params["data_directory"], manager_params["database_name"]
         )
-        manager_params.log_file = os.path.join(
-            manager_params.log_directory, manager_params.log_file
+        manager_params["log_file"] = os.path.join(
+            manager_params["log_directory"], manager_params["log_file"]
         )
-        manager_params.screenshot_path = os.path.join(
-            manager_params.data_directory, "screenshots"
+        manager_params["screenshot_path"] = os.path.join(
+            manager_params["data_directory"], "screenshots"
         )
-        manager_params.source_dump_path = os.path.join(
-            manager_params.data_directory, "sources"
+        manager_params["source_dump_path"] = os.path.join(
+            manager_params["data_directory"], "sources"
         )
         self.manager_params = manager_params
         self.browser_params = browser_params
         self._logger_kwargs = logger_kwargs
 
         # Create data directories if they do not exist
-        if not os.path.exists(manager_params.screenshot_path):
-            os.makedirs(manager_params.screenshot_path)
-        if not os.path.exists(manager_params.source_dump_path):
-            os.makedirs(manager_params.source_dump_path)
+        if not os.path.exists(manager_params["screenshot_path"]):
+            os.makedirs(manager_params["screenshot_path"])
+        if not os.path.exists(manager_params["source_dump_path"]):
+            os.makedirs(manager_params["source_dump_path"])
 
         # Check size of parameter dictionary
-        self.num_browsers = manager_params.num_browsers
+        self.num_browsers = manager_params["num_browsers"]
+        if len(browser_params) != self.num_browsers:
+            raise Exception(
+                "Number of <browser_params> dicts is not the same "
+                "as manager_params['num_browsers']"
+            )
 
         # Parse and flesh out js_instrument_settings
         for a_browsers_params in self.browser_params:
-            js_settings = a_browsers_params.js_instrument_settings
+            js_settings = a_browsers_params["js_instrument_settings"]
             cleaned_js_settings = clean_js_instrumentation_settings(js_settings)
-            a_browsers_params.js_instrument_settings = cleaned_js_settings
+            a_browsers_params["js_instrument_settings"] = cleaned_js_settings
 
         # Flow control
         self.closing = False
         self.failure_status: Optional[Dict[str, Any]] = None
         self.threadlock = threading.Lock()
         self.failurecount = 0
-
-        if manager_params.failure_limit:
-            self.failure_limit = manager_params.failure_limit
+        if manager_params["failure_limit"] is not None:
+            self.failure_limit = manager_params["failure_limit"]
         else:
             self.failure_limit = self.num_browsers * 2 + 10
 
         # Start logging server thread
         self.logging_server = MPLogger(
-            self.manager_params.log_file, self.manager_params, **self._logger_kwargs
+            self.manager_params["log_file"], self.manager_params, **self._logger_kwargs
         )
-        self.manager_params.logger_address = self.logging_server.logger_address
+        self.manager_params["logger_address"] = self.logging_server.logger_address
         self.logger = logging.getLogger("openwpm")
 
         # Initialize the data aggregators
@@ -167,25 +176,13 @@ class TaskManager:
         self.callback_thread.name = "OpenWPM-completion_handler"
         self.callback_thread.start()
 
-    def __enter__():
-        """
-        Execute starting procedure for TaskManager
-        """
-        return self
-
-    def __exit__():
-        """
-        Execute shutdown procedure for TaskManager
-        """
-        self.close()
-
     def _initialize_browsers(
-        self, browser_params: List[BrowserParamsInternal]
+        self, browser_params: List[Dict[str, Any]]
     ) -> List[Browser]:
         """ initialize the browser classes, each its unique set of params """
         browsers = list()
         for i in range(self.num_browsers):
-            browser_params[i].browser_id = self.data_aggregator.get_next_browser_id()
+            browser_params[i]["browser_id"] = self.data_aggregator.get_next_browser_id()
             browsers.append(Browser(self.manager_params, browser_params[i]))
 
         return browsers
@@ -217,7 +214,7 @@ class TaskManager:
             time.sleep(10)
 
             # Check browser memory usage
-            if self.manager_params.memory_watchdog:
+            if self.manager_params[MEMORY_WATCHDOG]:
                 for browser in self.browsers:
                     try:
                         # Sum the memory used by the geckodriver process, the
@@ -246,7 +243,7 @@ class TaskManager:
             # Check for browsers or displays that were not closed correctly
             # 300 second buffer to avoid killing freshly launched browsers
             # TODO This buffer should correspond to the maximum spawn timeout
-            if self.manager_params.process_watchdog:
+            if self.manager_params[PROCESS_WATCHDOG]:
                 geckodriver_pids: Set[int] = set()
                 display_pids: Set[int] = set()
                 check_time = time.time()
@@ -276,22 +273,27 @@ class TaskManager:
 
     def _launch_aggregators(self) -> None:
         """Launch the necessary data aggregators"""
-        self.data_aggregator: base_aggregator.BaseAggregator
-        if self.manager_params.output_format == "local":
-            self.data_aggregator = local_aggregator.LocalAggregator(
+        self.data_aggregator: BaseAggregator.BaseAggregator
+        if self.manager_params["output_format"] == "local":
+            self.data_aggregator = LocalAggregator.LocalAggregator(
                 self.manager_params, self.browser_params
             )
-        elif self.manager_params.output_format == "s3":
-            self.data_aggregator = S3_aggregator.S3Aggregator(
+        elif self.manager_params["output_format"] == "s3":
+            self.data_aggregator = S3Aggregator.S3Aggregator(
                 self.manager_params, self.browser_params
             )
-
+        else:
+            raise Exception(
+                "Unrecognized output format: %s" % self.manager_params["output_format"]
+            )
         self.data_aggregator.launch()
-        self.manager_params.aggregator_address = self.data_aggregator.listener_address
+        self.manager_params[
+            "aggregator_address"
+        ] = self.data_aggregator.listener_address
 
         # open connection to aggregator for saving crawl details
-        self.sock = ClientSocket(serialization="dill")
-        self.sock.connect(*self.manager_params.aggregator_address)
+        self.sock = clientsocket(serialization="dill")
+        self.sock.connect(*self.manager_params["aggregator_address"])
 
     def _shutdown_manager(
         self, during_init: bool = False, relaxed: bool = True
@@ -429,7 +431,7 @@ class TaskManager:
         self, browser: Browser, command_sequence: CommandSequence
     ) -> None:
         """
-        Sends CommandSequence to the BrowserManager one command at a time
+        sends command tuple to the BrowserManager
         """
         browser.is_fresh = False
 
@@ -519,7 +521,7 @@ class TaskManager:
                     {
                         "browser_id": browser.browser_id,
                         "visit_id": browser.curr_visit_id,
-                        "command": type(command).__name__,
+                        "command": type(command),
                         "arguments": json.dumps(
                             command.__dict__, default=lambda x: repr(x)
                         ).encode("utf-8"),

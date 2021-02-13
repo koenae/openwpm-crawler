@@ -1,4 +1,4 @@
-from openwpm import task_manager
+from openwpm import TaskManager
 from openwpm.utilities import db_utils
 from openwpm.utilities.platform_utils import parse_http_stack_trace_str
 
@@ -60,19 +60,19 @@ class TestCallstackInstrument(OpenWPMTest):
     def get_config(self, data_dir=""):
         manager_params, browser_params = self.get_test_config(data_dir)
         # Record HTTP Requests and Responses
-        browser_params[0].http_instrument = True
+        browser_params[0]["http_instrument"] = True
         # Record JS Web API calls
-        browser_params[0].js_instrument = True
+        browser_params[0]["js_instrument"] = True
         # Record the callstack of all WebRequests made
-        browser_params[0].callstack_instrument = True
+        browser_params[0]["callstack_instrument"] = True
         return manager_params, browser_params
 
     def test_http_stacktrace(self):
         test_url = utilities.BASE_TEST_URL + "/http_stacktrace.html"
         manager_params, browser_params = self.get_config()
-        manager = task_manager.TaskManager(manager_params, browser_params)
+        manager = TaskManager.TaskManager(manager_params, browser_params)
         manager.get(test_url, sleep=10)
-        db = manager_params.database_name
+        db = manager_params["db"]
         manager.close()
         rows = db_utils.query_db(
             db,

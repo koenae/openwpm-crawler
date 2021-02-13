@@ -10,8 +10,7 @@ from urllib.parse import urlparse
 
 import pytest
 
-from openwpm import command_sequence, task_manager
-from openwpm.commands.types import BaseCommand
+from openwpm import CommandSequence, TaskManager
 from openwpm.utilities import db_utils
 
 from . import utilities
@@ -592,7 +591,7 @@ BASE_PATH = os.path.dirname(os.path.realpath(__file__))
 class TestHTTPInstrument(OpenWPMTest):
     def get_config(self, data_dir=""):
         manager_params, browser_params = self.get_test_config(data_dir)
-        browser_params[0].http_instrument = True
+        browser_params[0]["http_instrument"] = True
         return manager_params, browser_params
 
     def test_page_visit(self):
@@ -671,11 +670,11 @@ class TestHTTPInstrument(OpenWPMTest):
         """
         test_url = utilities.BASE_TEST_URL + "/http_test_page.html"
         manager_params, browser_params = self.get_config()
-        manager = task_manager.TaskManager(manager_params, browser_params)
+        manager = TaskManager.TaskManager(manager_params, browser_params)
         manager.get(test_url, sleep=5)
         manager.get(test_url, sleep=5)
         manager.close()
-        db = manager_params.database_name
+        db = manager_params["db"]
 
         request_id_to_url = dict()
 
@@ -737,9 +736,9 @@ class TestHTTPInstrument(OpenWPMTest):
         """ check that javascript content is saved and hashed correctly """
         test_url = utilities.BASE_TEST_URL + "/http_test_page.html"
         manager_params, browser_params = self.get_test_config(str(tmpdir))
-        browser_params[0].http_instrument = True
-        browser_params[0].save_content = "script"
-        manager = task_manager.TaskManager(manager_params, browser_params)
+        browser_params[0]["http_instrument"] = True
+        browser_params[0]["save_content"] = "script"
+        manager = TaskManager.TaskManager(manager_params, browser_params)
         manager.get(url=test_url, sleep=1)
         manager.close()
         expected_hashes = {
@@ -762,9 +761,9 @@ class TestHTTPInstrument(OpenWPMTest):
             "25343f42d9ffa5c082745f775b172db87d6e14dfbc3160b48669e06d727bfc8d",
         }
         manager_params, browser_params = self.get_test_config(str(tmpdir))
-        browser_params[0].http_instrument = True
-        browser_params[0].save_content = "main_frame,sub_frame"
-        manager = task_manager.TaskManager(manager_params, browser_params)
+        browser_params[0]["http_instrument"] = True
+        browser_params[0]["save_content"] = "main_frame,sub_frame"
+        manager = TaskManager.TaskManager(manager_params, browser_params)
         manager.get(url=test_url, sleep=1)
         manager.close()
         for chash, content in db_utils.get_content(str(tmpdir)):
@@ -779,12 +778,12 @@ class TestHTTPInstrument(OpenWPMTest):
         """ check that content is saved and hashed correctly """
         test_url = utilities.BASE_TEST_URL + "/http_test_page.html"
         manager_params, browser_params = self.get_test_config(str(tmpdir))
-        browser_params[0].http_instrument = True
-        browser_params[0].save_content = True
-        manager = task_manager.TaskManager(manager_params, browser_params)
+        browser_params[0]["http_instrument"] = True
+        browser_params[0]["save_content"] = True
+        manager = TaskManager.TaskManager(manager_params, browser_params)
         manager.get(url=test_url, sleep=1)
         manager.close()
-        db = manager_params.database_name
+        db = manager_params["db"]
         rows = db_utils.query_db(db, "SELECT * FROM http_responses;")
         disk_content = dict()
         for row in rows:
@@ -892,7 +891,7 @@ class TestPOSTInstrument(OpenWPMTest):
 
     def get_config(self, data_dir=""):
         manager_params, browser_params = self.get_test_config(data_dir)
-        browser_params[0].http_instrument = True
+        browser_params[0]["http_instrument"] = True
         return manager_params, browser_params
 
     def get_post_requests_from_db(self, db):
@@ -998,16 +997,25 @@ class TestPOSTInstrument(OpenWPMTest):
         img_file_path = os.path.abspath("test_pages/shared/test_image.png")
         css_file_path = os.path.abspath("test_pages/shared/test_style.css")
 
+        def type_filenames_into_form(**kwargs):
+            """Simulate typing into the file upload input fields."""
+            driver = kwargs["driver"]
+            img_file_upload_element = driver.find_element_by_id("upload-img")
+            css_file_upload_element = driver.find_element_by_id("upload-css")
+            img_file_upload_element.send_keys(img_file_path)
+            css_file_upload_element.send_keys(css_file_path)
+            sleep(5)  # wait for the form submission (3 sec after onload)
+
         manager_params, browser_params = self.get_config()
-        manager = task_manager.TaskManager(manager_params, browser_params)
+        manager = TaskManager.TaskManager(manager_params, browser_params)
         test_url = utilities.BASE_TEST_URL + "/post_file_upload.html"
-        cs = command_sequence.CommandSequence(test_url)
+        cs = CommandSequence.CommandSequence(test_url)
         cs.get(sleep=0, timeout=60)
-        cs.append_command(FilenamesIntoFormCommand(img_file_path, css_file_path))
+        cs.run_custom_function(type_filenames_into_form, ())
         manager.execute_command_sequence(cs)
         manager.close()
 
-        post_body = self.get_post_request_body_from_db(manager_params.database_name)
+        post_body = self.get_post_request_body_from_db(manager_params["db"])
         # Binary strings get put into the database as-if they were latin-1.
         with open(img_file_path, "rb") as f:
             img_file_content = f.read().strip().decode("latin-1")
@@ -1021,22 +1029,3 @@ class TestPOSTInstrument(OpenWPMTest):
             u"upload-img": img_file_content,
         }
         assert expected_body == post_body_decoded
-
-
-class FilenamesIntoFormCommand(BaseCommand):
-    def __init__(self, img_file_path, css_file_path) -> None:
-        self.img_file_path = img_file_path
-        self.css_file_path = css_file_path
-
-    def execute(
-        self,
-        webdriver,
-        browser_params,
-        manager_params,
-        extension_socket,
-    ) -> None:
-        img_file_upload_element = webdriver.find_element_by_id("upload-img")
-        css_file_upload_element = webdriver.find_element_by_id("upload-css")
-        img_file_upload_element.send_keys(self.img_file_path)
-        css_file_upload_element.send_keys(self.css_file_path)
-        sleep(5)  # wait for the form submission (3 sec after onload)

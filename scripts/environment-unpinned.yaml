@@ -10,14 +10,14 @@ dependencies:
     - geckodriver
     - leveldb
     - multiprocess
-    - nodejs==14.*.*
+    - nodejs<15.0.0
     - pandas
     - pip
     - pillow
     - psutil
     - pyarrow
     - python
-    - pyvirtualdisplay
+    - pyvirtualdisplay==0.2.5 # https://github.com/mozilla/OpenWPM/issues/694
     - redis-py
     - s3fs==0.4.0 # https://github.com/mozilla/OpenWPM/issues/614
     - selenium
@@ -29,4 +29,3 @@ dependencies:
       - jsonschema
       - plyvel
       - domain-utils
-      - dataclasses-json

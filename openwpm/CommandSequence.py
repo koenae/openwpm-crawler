@@ -1,17 +1,19 @@
 from typing import Callable, List, Tuple
 
-from .commands.browser_commands import (
+from .Commands.Types import (
+    BaseCommand,
     BrowseCommand,
     DumpPageSourceCommand,
+    DumpProfCommand,
     FinalizeCommand,
     GetCommand,
     InitializeCommand,
     RecursiveDumpPageSourceCommand,
+    RunCustomFunctionCommand,
     SaveScreenshotCommand,
     ScreenshotFullPageCommand,
 )
-from .commands.types import BaseCommand
-from .errors import CommandExecutionError
+from .Errors import CommandExecutionError
 
 
 class CommandSequence:
@@ -37,7 +39,7 @@ class CommandSequence:
         retry_number: int = None,
         site_rank: int = None,
         callback: Callable[[bool], None] = None,
-    ) -> None:
+    ):
         """Initialize command sequence.
 
         Parameters
@@ -151,7 +153,7 @@ class CommandSequence:
     def recursive_dump_page_source(self, suffix="", timeout=30):
         """Dumps rendered source of current page visit to 'sources' dir.
         Unlike `dump_page_source`, this includes iframe sources. Archive is
-        stored in `manager_params.source_dump_path` and is keyed by the
+        stored in `manager_params['source_dump_path']` and is keyed by the
         current `visit_id` and top-level url. The source dump is a gzipped json
         file with the following structure:
         {
@@ -177,7 +179,15 @@ class CommandSequence:
         command = RecursiveDumpPageSourceCommand(suffix)
         self._commands_with_timeout.append((command, timeout))
 
-    def append_command(self, command: BaseCommand, timeout: int = 30) -> None:
+    def run_custom_function(self, function_handle, func_args=(), timeout=30):
+        """Run a custom by passing the function handle"""
+        self.total_timeout += timeout
+        if not self.contains_get_or_browse:
+            raise CommandExecutionError(
+                "No get or browse request preceding " "the dump page source command",
+                self,
+            )
+        command = RunCustomFunctionCommand(function_handle, func_args)
         self._commands_with_timeout.append((command, timeout))
 
     def mark_done(self, success: bool):

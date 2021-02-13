@@ -6,33 +6,17 @@ The user-facing component of the OpenWPM platform is the Task Manager. The Task 
 
 ## Instantiating a Task Manager
 
-All automation code is contained within the `openwpm` folder; the Task Manager code is contained in `openwpm/task_manager.py`.
+All automation code is contained within the `openwpm` folder; the Task Manager code is contained in `openwpm/TaskManager.py`.
 
 Task Managers can be instantiated in the following way:
+
+`manager = TaskManager.TaskManager(manager_params, browser_params)`
+
+You can call
 ```python
-from opemwpm.task_manager import TaskManager
-from openwpm.config import (
-    BrowserParams,
-    ManagerParams,
-)
-
-number_of_browser = 5    #  Number of browsers to spawn
-
-# Instantiating Browser and Manager Params with default values.
-manager_params = ManagerParams(num_browsers = number_of_browsers)
-browser_params = [BrowserParams() for bp in range(manager_params.num_browsers)]
-
-# These instances can be used to modify default values of both browser and manager params.
-manager_params.data_directory = '~/Documents'
-manager_params.database_name = 'custom_name.sqlite'
-
-for i in range(len(browser_params)):
-    browser_params[i].display_mode = 'headless'  # all 5 browsers will spawn in headless mode
-
-# Instantiating TaskManager
-manager = TaskManager(manager_params, browser_params)
-
+manager_params, browser_params = TaskManager.load_default_params(number_of_browsers_to_spawn)
 ```
+to get the default parameters.
 
 To learn more about the `manager_params` and `browser_params` have a look at [Configuration.md](Configuration.md)
 
@@ -86,7 +70,7 @@ with https://github.com/mozilla/OpenWPM/issues/743.
 
 Contained in `openwpm/BrowserManager.py`, Browser Managers provide a wrapper around the drivers used to automate full browser instances. In particular, we opted to use [Selenium](http://docs.seleniumhq.org/) to drive full browser instances as bot detection frameworks can more easily detect lightweight alternatives such as PhantomJS. 
 
-Browser Managers receive commands from the Task Manager, which they then pass to the command executor (located in `openwpm/commands/command_executor.py`), which receives a command object and converts it into web driver actions. Browser Managers also receive browser parameters which they use to instantiate the Selenium web driver using one of the browser initialization functions contained in `openwpm/deploy_browsers`.
+Browser Managers receive commands from the Task Manager, which they then pass to the command executor (located in `openwpm/Commands/command_executor.py`), which receives a command object and converts it into web driver actions. Browser Managers also receive browser parameters which they use to instantiate the Selenium web driver using one of the browser initialization functions contained in `openwpm/DeployBrowsers`.
 
 The Browser class, contained in the same file, is the Task Manager's wrapper around Browser Managers, which allow it to cleanly kill and restart Browser Managers as necessary.
 

@@ -7,9 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from multiprocess import Queue
 
-from openwpm.config import BrowserParamsInternal, ManagerParamsInternal
-
-from ..socket_interface import ServerSocket
+from ..SocketInterface import serversocket
 from ..utilities.multiprocess_utils import Process
 
 RECORD_TYPE_CONTENT = "page_content"
@@ -63,7 +61,7 @@ class BaseListener:
         self.record_queue: Queue = None  # Initialized on `startup`
         self.logger = logging.getLogger("openwpm")
         self.curent_visit_ids: List[int] = list()  # All visit_ids in flight
-        self.sock: Optional[ServerSocket] = None
+        self.sock: Optional[serversocket] = None
 
     @abc.abstractmethod
     def process_record(self, record):
@@ -100,7 +98,7 @@ class BaseListener:
         """Run listener startup tasks
 
         Note: Child classes should call this method"""
-        self.sock = ServerSocket(name=type(self).__name__)
+        self.sock = serversocket(name=type(self).__name__)
         self.status_queue.put(self.sock.sock.getsockname())
         self.sock.start_accepting()
         self.record_queue = self.sock.queue
@@ -195,18 +193,14 @@ class BaseAggregator:
 
     Parameters
     ----------
-    manager_params : ManagerParamsInternal
+    manager_params : dict
         TaskManager configuration parameters
-    browser_params : list of BrowserParamsInternal
-        List of browser configuration class<BrowserParams>"""
+    browser_params : list of dict
+        List of browser configuration dictionaries"""
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(
-        self,
-        manager_params: ManagerParamsInternal,
-        browser_params: List[BrowserParamsInternal],
-    ):
+    def __init__(self, manager_params, browser_params):
         self.manager_params = manager_params
         self.browser_params = browser_params
         self.listener_address = None

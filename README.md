@@ -1,6 +1,6 @@
 
 OpenWPM
-[![Build Status](https://github.com/mozilla/openwpm/workflows/Tests%20and%20linting/badge.svg?branch=master)](https://github.com/mozilla/openwpm/actions?query=branch%3Amaster)
+[![Build Status](https://travis-ci.org/mozilla/OpenWPM.svg?branch=master)](https://travis-ci.org/mozilla/OpenWPM)
 [![OpenWPM Matrix Channel](https://img.shields.io/matrix/OpenWPM:mozilla.org?label=Join%20us%20on%20matrix&server_fqdn=mozilla.modular.im)](https://matrix.to/#/#OpenWPM:mozilla.org?via=mozilla.org) <!-- omit in toc -->
 =======
 
@@ -82,8 +82,8 @@ Quick Start
 
 Once installed, it is very easy to run a quick test of OpenWPM. Check out
 `demo.py` for an example. This will use the default setting specified in
-`openwpm/config.py::ManagerParams` and
-`openwpm/config.py::BrowserParams`, with the exception of the changes
+`openwpm/default_manager_params.json` and
+`openwpm/default_browser_params.json`, with the exception of the changes
 specified in `demo.py`.
 
 More information on the instrumentation and configuration parameters is given
@@ -126,7 +126,7 @@ Troubleshooting
 2. In older versions of firefox (pre 74) the setting to enable extensions was called
    `extensions.legacy.enabled`. If you need to work with earlier firefox, update the
    setting name `extensions.experiments.enabled` in
-   `openwpm/deploy_browsers/configure_firefox.py`.
+   `openwpm/DeployBrowsers/configure_firefox.py`.
 
 3. Make sure you're conda environment is activated (`conda activate openwpm`). You can see
    you environments and the activate one by running `conda env list` the active environment
@@ -188,7 +188,7 @@ Persistence Types
 #### Local Databases
 By default OpenWPM saves all data locally on disk in a variety of formats.
 Most of the instrumentation saves to a SQLite database specified
-by `manager_params.database_name` in the main output directory. Response
+by `manager_params['database_name']` in the main output directory. Response
 bodies are saved in a LevelDB database named `content.ldb`, and are keyed by
 the hash of the content. In addition, the browser commands that dump page
 source and save screenshots save them in the `sources` and `screenshots`
@@ -202,9 +202,9 @@ Parquet Dataset. This is currently experimental and hasn't been thoroughly
 tested. Screenshots, and page source saving is not currently supported and
 will still be stored in local databases and directories. To enable S3
 saving specify the following configuration parameters in `manager_params`:
-* Persistence Type: `manager_params.output_format = 's3'`
-* S3 bucket name: `manager_params.s3_bucket = 'openwpm-test-crawl'`
-* Directory within S3 bucket: `manager_params.s3_directory = '2018-09-09_test-crawl-new'`
+* Persistence Type: `manager_params['output_format'] = 's3'`
+* S3 bucket name: `manager_params['s3_bucket'] = 'openwpm-test-crawl'`
+* Directory within S3 bucket: `manager_params['s3_directory'] = '2018-09-09_test-crawl-new'`
 
 In order to save to S3 you must have valid access credentials stored in
 `~/.aws`. We do not currently allow you to specify an alternate storage

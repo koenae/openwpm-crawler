@@ -18,9 +18,7 @@ from botocore.client import Config
 from botocore.exceptions import ClientError, EndpointConnectionError
 from pyarrow.filesystem import S3FSWrapper  # noqa
 
-from openwpm.config import ManagerParamsInternal
-
-from .base_aggregator import (
+from .BaseAggregator import (
     RECORD_TYPE_CONTENT,
     RECORD_TYPE_CREATE,
     RECORD_TYPE_SPECIAL,
@@ -40,7 +38,7 @@ S3_CONFIG = Config(**S3_CONFIG_KWARGS)
 
 
 def listener_process_runner(
-    base_params: BaseParams, manager_params: ManagerParamsInternal, instance_id: int
+    base_params: BaseParams, manager_params: Dict[str, Any], instance_id: int
 ) -> None:
     """S3Listener runner. Pass to new process"""
     listener = S3Listener(base_params, manager_params, instance_id)
@@ -71,12 +69,9 @@ class S3Listener(BaseListener):
     """
 
     def __init__(
-        self,
-        base_params: BaseParams,
-        manager_params: ManagerParamsInternal,
-        instance_id: int,
+        self, base_params: BaseParams, manager_params: Dict[str, Any], instance_id: int
     ) -> None:
-        self.dir = manager_params.s3_directory
+        self.dir = manager_params["s3_directory"]
 
         def factory_function():
             return defaultdict(list)
@@ -90,7 +85,7 @@ class S3Listener(BaseListener):
         self._unsaved_visit_ids: MutableSet[int] = set()
 
         self._instance_id = instance_id
-        self._bucket = manager_params.s3_bucket
+        self._bucket = manager_params["s3_bucket"]
         self._s3_content_cache: MutableSet[
             str
         ] = set()  # cache of filenames already uploaded
@@ -346,8 +341,8 @@ class S3Aggregator(BaseAggregator):
 
     def __init__(self, manager_params, browser_params):
         super(S3Aggregator, self).__init__(manager_params, browser_params)
-        self.dir = manager_params.s3_directory
-        self.bucket = manager_params.s3_bucket
+        self.dir = manager_params["s3_directory"]
+        self.bucket = manager_params["s3_bucket"]
         self.s3 = boto3.client("s3")
         self._instance_id = random.getrandbits(32)
         self._create_bucket()

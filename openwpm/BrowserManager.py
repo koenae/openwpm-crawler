@@ -9,17 +9,18 @@ import threading
 import time
 import traceback
 from queue import Empty as EmptyQueue
-from typing import Optional, Union
+from typing import Optional
 
 import psutil
 from multiprocess import Queue
 from selenium.common.exceptions import WebDriverException
 from tblib import pickling_support
 
-from .commands.types import BaseCommand, ShutdownSignal
-from .deploy_browsers import deploy_firefox
-from .errors import BrowserConfigError, BrowserCrashError, ProfileLoadError
-from .socket_interface import ClientSocket
+from .Commands import command_executor
+from .Commands.Types import ShutdownCommand
+from .DeployBrowsers import deploy_browser
+from .Errors import BrowserConfigError, BrowserCrashError, ProfileLoadError
+from .SocketInterface import clientsocket
 from .utilities.multiprocess_utils import (
     Process,
     kill_process_and_children,
@@ -47,8 +48,8 @@ class Browser:
 
         # manager parameters
         self.current_profile_path = None
-        self.db_socket_address = manager_params.aggregator_address
-        self.browser_id = browser_params.browser_id
+        self.db_socket_address = manager_params["aggregator_address"]
+        self.browser_id = browser_params["browser_id"]
         self.curr_visit_id: int = None
         self.browser_params = browser_params
         self.manager_params = manager_params
@@ -105,7 +106,7 @@ class Browser:
                 close_webdriver=False,
             )
             # make sure browser loads crashed profile
-            self.browser_params.recovery_tar = tempdir
+            self.browser_params['recovery_tar'] = tempdir
             
             crash_recovery = True
         else:
@@ -235,7 +236,7 @@ class Browser:
         if clear_profile and self.current_profile_path is not None:
             shutil.rmtree(self.current_profile_path, ignore_errors=True)
             self.current_profile_path = None
-            self.browser_params.recovery_tar = None
+            self.browser_params["recovery_tar"] = None
 
         return self.launch_browser_manager()
 
@@ -285,7 +286,7 @@ class Browser:
             return
 
         # Send the shutdown command
-        command = ShutdownSignal()
+        command = ShutdownCommand()
         self.command_queue.put((command))
 
         # Verify that webdriver has closed (30 second timeout)
@@ -386,7 +387,7 @@ class Browser:
         self.close_browser_manager(force=force)
 
         # Archive browser profile (if requested)
-        if not during_init and self.browser_params.profile_archive_dir is not None:
+        if not during_init and self.browser_params["profile_archive_dir"] is not None:
             self.logger.warning(
                 "BROWSER %i: Archiving the browser profile directory is "
                 "currently unsupported. "
@@ -396,19 +397,19 @@ class Browser:
         self.logger.debug(
             "BROWSER %i: during_init=%s | profile_archive_dir=%s" % (
                 self.browser_id, str(during_init),
-                self.browser_params.profile_archive_dir)
+                self.browser_params['profile_archive_dir'])
         )
         if (not during_init and
-                self.browser_params.profile_archive_dir is not None):
+                self.browser_params['profile_archive_dir'] is not None):
             self.logger.debug(
                 "BROWSER %i: Archiving browser profile directory to %s" % (
                     self.browser_id,
-                    self.browser_params.profile_archive_dir))
+                    self.browser_params['profile_archive_dir']))
             profile_commands.dump_profile(
                 self.current_profile_path,
                 self.manager_params,
                 self.browser_params,
-                self.browser_params.profile_archive_dir,
+                self.browser_params['profile_archive_dir'],
                 close_webdriver=False,
                 compress=True
             )
@@ -430,10 +431,9 @@ def BrowserManager(
     to the TaskManager.
     """
     logger = logging.getLogger("openwpm")
-    display = None
     try:
         # Start Xvfb (if necessary), webdriver, and browser
-        driver, prof_folder, display = deploy_firefox.deploy_firefox(
+        driver, prof_folder = deploy_browser.deploy_browser(
             status_queue, browser_params, manager_params, crash_recovery
         )
         if prof_folder[-1] != "/":
@@ -441,10 +441,13 @@ def BrowserManager(
 
         # Read the extension port -- if extension is enabled
         # TODO: Initial communication from extension to TM should use sockets
-        if browser_params.extension_enabled:
+        if (
+            browser_params["browser"] == "firefox"
+            and browser_params["extension_enabled"]
+        ):
             logger.debug(
                 "BROWSER %i: Looking for extension port information "
-                "in %s" % (browser_params.browser_id, prof_folder)
+                "in %s" % (browser_params["browser_id"], prof_folder)
             )
             elapsed = 0
             port = None
@@ -466,19 +469,19 @@ def BrowserManager(
 
             logger.debug(
                 "BROWSER %i: Connecting to extension on port %i"
-                % (browser_params.browser_id, port)
+                % (browser_params["browser_id"], port)
             )
-            extension_socket = ClientSocket(serialization="json")
+            extension_socket = clientsocket(serialization="json")
             extension_socket.connect("127.0.0.1", int(port))
         else:
             extension_socket = None
 
-        logger.debug("BROWSER %i: BrowserManager ready." % browser_params.browser_id)
+        logger.debug("BROWSER %i: BrowserManager ready." % browser_params["browser_id"])
 
         # passes the profile folder back to the
         # TaskManager to signal a successful startup
         status_queue.put(("STATUS", "Browser Ready", (prof_folder, "READY")))
-        browser_params.profile_path = prof_folder
+        browser_params["profile_path"] = prof_folder
 
         # starts accepting arguments until told to die
         while True:
@@ -487,9 +490,9 @@ def BrowserManager(
                 time.sleep(0.001)
                 continue
 
-            command: Union[ShutdownSignal, BaseCommand] = command_queue.get()
+            command = command_queue.get()
 
-            if type(command) is ShutdownSignal:
+            if type(command) is ShutdownCommand:
                 # Geckodriver creates a copy of the profile (and the original
                 # temp file created by FirefoxProfile() is deleted).
                 # We clear the profile attribute here to prevent prints from:
@@ -502,14 +505,15 @@ def BrowserManager(
 
             logger.info(
                 "BROWSER %i: EXECUTING COMMAND: %s"
-                % (browser_params.browser_id, str(command))
+                % (browser_params["browser_id"], str(command))
             )
 
             # attempts to perform an action and return an OK signal
             # if command fails for whatever reason, tell the TaskManager to
             # kill and restart its worker processes
             try:
-                command.execute(
+                command_executor.execute_command(
+                    command,
                     driver,
                     browser_params,
                     manager_params,
@@ -528,7 +532,7 @@ def BrowserManager(
                 extra["exception"] = tb[-1]
                 logger.error(
                     "BROWSER %i: WebDriverException while executing command"
-                    % browser_params.browser_id,
+                    % browser_params["browser_id"],
                     exc_info=True,
                     extra=extra,
                 )
@@ -537,21 +541,19 @@ def BrowserManager(
     except (ProfileLoadError, BrowserConfigError, AssertionError) as e:
         logger.error(
             "BROWSER %i: %s thrown, informing parent and raising"
-            % (browser_params.browser_id, e.__class__.__name__)
+            % (browser_params["browser_id"], e.__class__.__name__)
         )
         status_queue.put(("CRITICAL", pickle.dumps(sys.exc_info())))
+        return
     except Exception:
         tb = traceback.format_exception(*sys.exc_info())
         extra = parse_traceback_for_sentry(tb)
         extra["exception"] = tb[-1]
         logger.error(
             "BROWSER %i: Crash in driver, restarting browser manager"
-            % browser_params.browser_id,
+            % browser_params["browser_id"],
             exc_info=True,
             extra=extra,
         )
         status_queue.put(("FAILED", pickle.dumps(sys.exc_info())))
-    finally:
-        if display is not None:
-            display.stop()
         return
