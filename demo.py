@@ -1,12 +1,24 @@
 from openwpm import CommandSequence, TaskManager
+import csv
 
 # The list of sites that we wish to crawl
 NUM_BROWSERS = 1
-sites = [
-    "http://www.example.com",
-    "http://www.princeton.edu",
-    "http://citp.princeton.edu/",
-]
+sites = []
+with open("dataset.csv") as csvfile:
+    reader = csv.reader(csvfile, quoting=csv.QUOTE_NONE)
+    for row in reader:
+        element = row[1]
+        if "www" in element:
+            element = "http://" + element
+        else:
+            element = "http://www." + element
+        sites.append(element)
+
+# sites = [
+#     "http://www.example.com",
+#     "http://www.princeton.edu",
+#     "http://citp.princeton.edu/",
+# ]
 
 # Loads the default manager params
 # and NUM_BROWSERS copies of the default browser params
@@ -27,13 +39,12 @@ for i in range(NUM_BROWSERS):
     # Record DNS resolution
     browser_params[i]["dns_instrument"] = True
 
-
 # Launch only browser 0 headless
 browser_params[0]["display_mode"] = "native"
 
 # Update TaskManager configuration (use this for crawl-wide settings)
-manager_params["data_directory"] = "~/Desktop/"
-manager_params["log_directory"] = "~/Desktop/"
+manager_params["data_directory"] = "~/Desktop/output/"
+manager_params["log_directory"] = "~/Desktop/output/"
 manager_params["memory_watchdog"] = True
 manager_params["process_watchdog"] = True
 
@@ -43,7 +54,6 @@ manager = TaskManager.TaskManager(manager_params, browser_params)
 
 # Visits the sites
 for site in sites:
-
     # Parallelize sites over all number of browsers set above.
     command_sequence = CommandSequence.CommandSequence(
         site,
