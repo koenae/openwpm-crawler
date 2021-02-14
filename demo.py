@@ -1,10 +1,11 @@
 from openwpm import CommandSequence, TaskManager
 import csv
+import time
 
 # The list of sites that we wish to crawl
 NUM_BROWSERS = 1
 sites = []
-with open("dataset.csv") as csvfile:
+with open("moz.csv") as csvfile:
     reader = csv.reader(csvfile, quoting=csv.QUOTE_NONE)
     for row in reader:
         element = row[1]
@@ -38,6 +39,7 @@ for i in range(NUM_BROWSERS):
     browser_params[i]["callstack_instrument"] = True
     # Record DNS resolution
     browser_params[i]["dns_instrument"] = True
+    browser_params[i]["save_content"] = "script"
 
 # Launch only browser 0 headless
 browser_params[0]["display_mode"] = "native"
@@ -51,6 +53,8 @@ manager_params["process_watchdog"] = True
 # Instantiates the measurement platform
 # Commands time out by default after 60 seconds
 manager = TaskManager.TaskManager(manager_params, browser_params)
+
+start = time.process_time()
 
 # Visits the sites
 for site in sites:
@@ -67,5 +71,11 @@ for site in sites:
     # Run commands across the three browsers (simple parallelization)
     manager.execute_command_sequence(command_sequence)
 
+end = time.process_time()
+print("process time {}".format(end - start))
+
 # Shuts down the browsers and waits for the data to finish logging
 manager.close()
+
+
+
