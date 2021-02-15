@@ -25,6 +25,7 @@
     "markdownlint-cli": "^0.23.2"
   },
   "dependencies": {
-    "level": "^6.0.1"
+    "level": "^6.0.1",
+    "line-by-line": "^0.1.6"
   }
 }
