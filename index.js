@@ -14,8 +14,14 @@ level('content.ldb', { createIfMissing: false }, function (err, db) {
   let lr = new LineByLineReader('hashes')
   lr.on('line', (line) => {
     db.get(line, function (err, content) {
-        if (content.includes('cmp(') || content.includes('tcfapi(')) {
-            console.log(line, ' contains tcf function')
+        if (content.includes('cmp')) {
+            console.log(line, ' contains cmp function')
+            storeContent(line, content)
+        } else if (content.includes('tcfapi')) {
+            console.log(line, ' contains tcfapi function')
+            storeContent(line, content)
+        } else if (content.includes('consent')) {
+            console.log(line, ' contains consent function')
             storeContent(line, content)
         }
     })
