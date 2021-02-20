@@ -8,6 +8,7 @@ import time
 import traceback
 from glob import glob
 from hashlib import md5
+import sqlite3
 
 from PIL import Image
 from selenium.common.exceptions import (
@@ -112,7 +113,7 @@ def tab_restart_browser(webdriver):
 
 
 def get_website(
-    url, sleep, visit_id, webdriver, browser_params, extension_socket: clientsocket
+        url, sleep, visit_id, webdriver, browser_params, extension_socket: clientsocket
 ):
     """
     goes to <url> using the given <webdriver> instance
@@ -148,14 +149,14 @@ def get_website(
 
 
 def browse_website(
-    url,
-    num_links,
-    sleep,
-    visit_id,
-    webdriver,
-    browser_params,
-    manager_params,
-    extension_socket,
+        url,
+        num_links,
+        sleep,
+        visit_id,
+        webdriver,
+        browser_params,
+        manager_params,
+        extension_socket,
 ):
     """Calls get_website before visiting <num_links> present on the page.
 
@@ -200,6 +201,17 @@ def save_screenshot(visit_id, browser_id, driver, manager_params, suffix=""):
     driver.save_screenshot(outname)
 
 
+def ping_cmp(visit_id, webdriver):
+    openwpm_db = "/home/parallels/Desktop/output/crawl-data.sqlite"
+    conn = sqlite3.connect(openwpm_db, timeout=10)
+    cur = conn.cursor()
+    tc_data = webdriver.execute_script(
+        "let result; window.__tcfapi('ping', 2, function(tcData, success) { result = JSON.stringify(tcData); }); return result;")
+    cur.execute("INSERT INTO ping_cmp VALUES (?,?)", (visit_id, tc_data))
+    conn.commit()
+    conn.close()
+
+
 def _stitch_screenshot_parts(visit_id, browser_id, manager_params):
     # Read image parts and compute dimensions of output image
     total_height = -1
@@ -208,9 +220,9 @@ def _stitch_screenshot_parts(visit_id, browser_id, manager_params):
     images = dict()
     parts = list()
     for f in glob(
-        os.path.join(
-            manager_params["screenshot_path"], "parts", "%i*-part-*.png" % visit_id
-        )
+            os.path.join(
+                manager_params["screenshot_path"], "parts", "%i*-part-*.png" % visit_id
+            )
     ):
 
         # Load image from disk and parse params out of filename
@@ -263,7 +275,6 @@ def _stitch_screenshot_parts(visit_id, browser_id, manager_params):
 
 
 def screenshot_full_page(visit_id, browser_id, driver, manager_params, suffix=""):
-
     outdir = os.path.join(manager_params["screenshot_path"], "parts")
     if not os.path.isdir(outdir):
         os.mkdir(outdir)
@@ -284,7 +295,7 @@ def screenshot_full_page(visit_id, browser_id, driver, manager_params, suffix=""
         prev_scrollY = -1
         driver.save_screenshot(outname % (part, curr_scrollY))
         while (
-            curr_scrollY + inner_height
+                curr_scrollY + inner_height
         ) < max_height and curr_scrollY != prev_scrollY:
 
             # Scroll down to bottom of previous viewport
@@ -372,7 +383,7 @@ def recursive_dump_page_source(visit_id, driver, manager_params, suffix=""):
 
 
 def finalize(
-    visit_id: int, webdriver: WebDriver, extension_socket: clientsocket, sleep: int
+        visit_id: int, webdriver: WebDriver, extension_socket: clientsocket, sleep: int
 ) -> None:
     """ Informs the extension that a visit is done """
     tab_restart_browser(webdriver)

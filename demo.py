@@ -5,7 +5,7 @@ import time
 # The list of sites that we wish to crawl
 NUM_BROWSERS = 1
 sites = []
-with open("moz.csv") as csvfile:
+with open("dataset.csv") as csvfile:
     reader = csv.reader(csvfile, quoting=csv.QUOTE_NONE)
     for row in reader:
         element = row[1]
@@ -22,6 +22,7 @@ with open("moz.csv") as csvfile:
 # ]
 
 # Loads the default manager params
+
 # and NUM_BROWSERS copies of the default browser params
 manager_params, browser_params = TaskManager.load_default_params(NUM_BROWSERS)
 
@@ -67,6 +68,7 @@ for site in sites:
 
     # Start by visiting the page
     command_sequence.get(sleep=3, timeout=60)
+    command_sequence.ping_cmp(sleep=3, timeout=60)
 
     # Run commands across the three browsers (simple parallelization)
     manager.execute_command_sequence(command_sequence)

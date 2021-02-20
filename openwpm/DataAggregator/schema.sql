@@ -17,6 +17,10 @@ CREATE TABLE IF NOT EXISTS crawl (
     start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(task_id) REFERENCES task(task_id));
 
+CREATE TABLE IF NOT EXISTS ping_cmp (
+    visit_id INTEGER PRIMARY KEY,
+    tc_data TEXT);
+
 /*
 # site_visits
  */

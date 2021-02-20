@@ -11,15 +11,16 @@ from .Types import (
     RunCustomFunctionCommand,
     SaveScreenshotCommand,
     ScreenshotFullPageCommand,
+    PingCmpCommand
 )
 
 
 def execute_command(
-    command,
-    webdriver,
-    browser_params,
-    manager_params,
-    extension_socket,
+        command,
+        webdriver,
+        browser_params,
+        manager_params,
+        extension_socket,
 ):
     """Executes BrowserManager commands
     commands are of form (COMMAND, ARG0, ARG1, ...)
@@ -32,6 +33,12 @@ def execute_command(
             webdriver=webdriver,
             browser_params=browser_params,
             extension_socket=extension_socket,
+        )
+
+    elif type(command) is PingCmpCommand:
+        browser_commands.ping_cmp(
+            visit_id=command.visit_id,
+            webdriver=webdriver,
         )
 
     elif type(command) is BrowseCommand:

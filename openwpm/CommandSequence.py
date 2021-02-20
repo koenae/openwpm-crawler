@@ -12,6 +12,7 @@ from .Commands.Types import (
     RunCustomFunctionCommand,
     SaveScreenshotCommand,
     ScreenshotFullPageCommand,
+    PingCmpCommand,
 )
 from .Errors import CommandExecutionError
 
@@ -32,13 +33,13 @@ class CommandSequence:
     """
 
     def __init__(
-        self,
-        url: str,
-        reset: bool = False,
-        blocking: bool = False,
-        retry_number: int = None,
-        site_rank: int = None,
-        callback: Callable[[bool], None] = None,
+            self,
+            url: str,
+            reset: bool = False,
+            blocking: bool = False,
+            retry_number: int = None,
+            site_rank: int = None,
+            callback: Callable[[bool], None] = None,
     ):
         """Initialize command sequence.
 
@@ -89,7 +90,7 @@ class CommandSequence:
         self.contains_get_or_browse = True
 
     def dump_profile(
-        self, dump_folder, close_webdriver=False, compress=True, timeout=120
+            self, dump_folder, close_webdriver=False, compress=True, timeout=120
     ):
         """ dumps from the profile path to a given file (absolute path) """
         raise NotImplementedError(
@@ -188,6 +189,14 @@ class CommandSequence:
                 self,
             )
         command = RunCustomFunctionCommand(function_handle, func_args)
+        self._commands_with_timeout.append((command, timeout))
+
+    def ping_cmp(self, sleep=0, timeout=60):
+        self.total_timeout += timeout
+        if not self.contains_get_or_browse:
+            raise CommandExecutionError("No get or browse request preceding "
+                                        "the jiggle_mouse command", self)
+        command = PingCmpCommand(sleep)
         self._commands_with_timeout.append((command, timeout))
 
     def mark_done(self, success: bool):

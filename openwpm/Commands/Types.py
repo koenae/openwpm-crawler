@@ -108,3 +108,11 @@ class InitializeCommand(BaseCommand):
 
     def __repr__(self):
         return "IntitializeCommand()"
+
+
+class PingCmpCommand(BaseCommand):
+    def __init__(self, sleep):
+        self.sleep = sleep
+
+    def __repr__(self):
+        return "PingCmpCommand()"
