@@ -202,14 +202,23 @@ def save_screenshot(visit_id, browser_id, driver, manager_params, suffix=""):
 
 
 def ping_cmp(visit_id, webdriver):
-    openwpm_db = "/home/parallels/Desktop/output/crawl-data.sqlite"
-    conn = sqlite3.connect(openwpm_db, timeout=10)
-    cur = conn.cursor()
     tc_data = webdriver.execute_script(
-        "let result; window.__tcfapi('ping', 2, function(tcData, success) { result = JSON.stringify(tcData); }); return result;")
-    cur.execute("INSERT INTO ping_cmp VALUES (?,?)", (visit_id, tc_data))
-    conn.commit()
-    conn.close()
+        "let result; "
+        "if (typeof __tcfapi == 'function') { "
+        "   window.__tcfapi('ping', 2, function(tcData, success) { "
+        "       result = tcData; "
+        "   }); "
+        "} "
+        "return result;")
+
+    if tc_data is not None:
+        openwpm_db = "/home/parallels/Desktop/output/crawl-data.sqlite"
+        conn = sqlite3.connect(openwpm_db, timeout=10)
+        cur = conn.cursor()
+        cur.execute("INSERT INTO ping_cmp VALUES (?,?,?,?)",
+                    (visit_id, tc_data["cmpId"], tc_data["tcfPolicyVersion"], tc_data["gdprApplies"]))
+        conn.commit()
+        conn.close()
 
 
 def _stitch_screenshot_parts(visit_id, browser_id, manager_params):
