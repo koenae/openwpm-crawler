@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS crawl (
 CREATE TABLE IF NOT EXISTS ping_cmp (
     visit_id INTEGER PRIMARY KEY,
     cmp_id TEXT,
+    cmp_name TEXT,
     tcf_policy_version TEXT,
     gdpr_applies INTEGER);
 

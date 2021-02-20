@@ -212,11 +212,18 @@ def ping_cmp(visit_id, webdriver):
         "return result;")
 
     if tc_data is not None:
+        cmp_name = ""
+        with open("cmplist.json") as json_file:
+            data = json.load(json_file)
+            for key, value in data["cmps"].items():
+                if int(key) == tc_data["cmpId"]:
+                    cmp_name = value["name"]
+                    break
         openwpm_db = "/home/parallels/Desktop/output/crawl-data.sqlite"
         conn = sqlite3.connect(openwpm_db, timeout=10)
         cur = conn.cursor()
-        cur.execute("INSERT INTO ping_cmp VALUES (?,?,?,?)",
-                    (visit_id, tc_data["cmpId"], tc_data["tcfPolicyVersion"], tc_data["gdprApplies"]))
+        cur.execute("INSERT INTO ping_cmp VALUES (?,?,?,?,?)",
+                    (visit_id, tc_data["cmpId"], cmp_name, tc_data["tcfPolicyVersion"], tc_data["gdprApplies"]))
         conn.commit()
         conn.close()
 
