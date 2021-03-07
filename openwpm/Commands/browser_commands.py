@@ -228,6 +228,67 @@ def ping_cmp(visit_id, webdriver):
         conn.close()
 
 
+def detect_cookie_dialog(visit_id, webdriver):
+    element = None
+
+    try:
+        frames = webdriver.find_elements_by_tag_name("iframe")
+        for frame in frames:
+            matches = ["cmp", "consent"]
+            if any(x in frame.get_attribute("src") for x in matches):
+                element = frame
+                break
+            else:
+                try:
+                    element = webdriver.find_element_by_xpath(
+                        "//*[contains(@class, {}) or contains(@class, {}) or contains(@class, {})]".format(
+                            "'" + "banner" + "'",
+                            "'" + "consent" + "'",
+                            "'" + "cmp" + "'"))
+                except Exception:
+                    continue
+    except Exception:
+        pass
+
+    if element is None:
+        with open("cookie_dialog_ids.txt") as f:
+            ids = f.read().splitlines()
+
+        for i in ids:
+            try:
+                # xpath_id = "//*[@id={}]".format('"' + class_id + '"')
+                element = webdriver.find_element_by_xpath(
+                    "//*[contains(translate(@id, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {})]".format(
+                        "'" + i + "'"))
+                break
+            except Exception:
+                continue
+
+        if element is None:
+            with open("cookie_dialog_classes.txt") as f:
+                classes = f.read().splitlines()
+            for c in classes:
+                try:
+                    element = webdriver.find_element_by_xpath(
+                        "//*[contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {})]".format(
+                            "'" + c + "'"))
+                    break
+                except Exception:
+                    continue
+
+    found = 0
+    if element is not None:
+        found = 1
+
+    openwpm_db = "/home/parallels/Desktop/output/crawl-data.sqlite"
+    conn = sqlite3.connect(openwpm_db, timeout=20)
+    cur = conn.cursor()
+    cur.execute("INSERT INTO cookie_dialog VALUES (?,?)",
+                (visit_id, found))
+    conn.commit()
+    conn.close()
+
+
 def _stitch_screenshot_parts(visit_id, browser_id, manager_params):
     # Read image parts and compute dimensions of output image
     total_height = -1

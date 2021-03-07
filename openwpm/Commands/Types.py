@@ -116,3 +116,11 @@ class PingCmpCommand(BaseCommand):
 
     def __repr__(self):
         return "PingCmpCommand()"
+
+
+class DetectCookieDialogCommand(BaseCommand):
+    def __init__(self, sleep):
+        self.sleep = sleep
+
+    def __repr__(self):
+        return "DetectCookieDialogCommand()"

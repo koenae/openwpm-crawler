@@ -29,18 +29,18 @@ manager_params, browser_params = TaskManager.load_default_params(NUM_BROWSERS)
 # Update browser configuration (use this for per-browser settings)
 for i in range(NUM_BROWSERS):
     # Record HTTP Requests and Responses
-    browser_params[i]["http_instrument"] = True
+    browser_params[i]["http_instrument"] = False
     # Record cookie changes
-    browser_params[i]["cookie_instrument"] = True
+    browser_params[i]["cookie_instrument"] = False
     # Record Navigations
-    browser_params[i]["navigation_instrument"] = True
+    browser_params[i]["navigation_instrument"] = False
     # Record JS Web API calls
-    browser_params[i]["js_instrument"] = True
+    browser_params[i]["js_instrument"] = False
     # Record the callstack of all WebRequests made
-    browser_params[i]["callstack_instrument"] = True
+    browser_params[i]["callstack_instrument"] = False
     # Record DNS resolution
-    browser_params[i]["dns_instrument"] = True
-    browser_params[i]["save_content"] = "script"
+    browser_params[i]["dns_instrument"] = False
+    # browser_params[i]["save_content"] = "script"
 
 # Launch only browser 0 headless
 browser_params[0]["display_mode"] = "native"
@@ -68,7 +68,8 @@ for site in sites:
 
     # Start by visiting the page
     command_sequence.get(sleep=3, timeout=60)
-    command_sequence.ping_cmp(sleep=3, timeout=60)
+    # command_sequence.ping_cmp(sleep=3, timeout=60)
+    command_sequence.detect_cookie_dialog(sleep=3, timeout=60)
 
     # Run commands across the three browsers (simple parallelization)
     manager.execute_command_sequence(command_sequence)

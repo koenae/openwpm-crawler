@@ -11,7 +11,8 @@ from .Types import (
     RunCustomFunctionCommand,
     SaveScreenshotCommand,
     ScreenshotFullPageCommand,
-    PingCmpCommand
+    PingCmpCommand,
+    DetectCookieDialogCommand
 )
 
 
@@ -37,6 +38,12 @@ def execute_command(
 
     elif type(command) is PingCmpCommand:
         browser_commands.ping_cmp(
+            visit_id=command.visit_id,
+            webdriver=webdriver,
+        )
+
+    elif type(command) is DetectCookieDialogCommand:
+        browser_commands.detect_cookie_dialog(
             visit_id=command.visit_id,
             webdriver=webdriver,
         )

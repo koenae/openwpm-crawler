@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS ping_cmp (
     tcf_policy_version TEXT,
     gdpr_applies INTEGER);
 
+CREATE TABLE IF NOT EXISTS cookie_dialog (
+    visit_id INTEGER PRIMARY KEY,
+    has_dialog INTEGER);
+
 /*
 # site_visits
  */
