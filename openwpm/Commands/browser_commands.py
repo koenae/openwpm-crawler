@@ -20,6 +20,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.firefox.options import Options
 
 from ..SocketInterface import clientsocket
 from .utils.webdriver_utils import (
@@ -230,6 +231,7 @@ def ping_cmp(visit_id, webdriver):
 
 def detect_cookie_dialog(visit_id, webdriver):
     element = None
+    element_type = ""
 
     try:
         frames = webdriver.find_elements_by_tag_name("iframe")
@@ -237,6 +239,7 @@ def detect_cookie_dialog(visit_id, webdriver):
             matches = ["cmp", "consent"]
             if any(x in frame.get_attribute("src") for x in matches):
                 element = frame
+                element_type = "frame"
                 break
             else:
                 try:
@@ -245,6 +248,8 @@ def detect_cookie_dialog(visit_id, webdriver):
                             "'" + "banner" + "'",
                             "'" + "consent" + "'",
                             "'" + "cmp" + "'"))
+                    element_type = "frame"
+                    break
                 except Exception:
                     continue
     except Exception:
@@ -258,8 +263,9 @@ def detect_cookie_dialog(visit_id, webdriver):
             try:
                 # xpath_id = "//*[@id={}]".format('"' + class_id + '"')
                 element = webdriver.find_element_by_xpath(
-                    "//*[contains(translate(@id, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {})]".format(
+                    "//*[translate(@id, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')={}]".format(
                         "'" + i + "'"))
+                element_type = "id"
                 break
             except Exception:
                 continue
@@ -270,8 +276,9 @@ def detect_cookie_dialog(visit_id, webdriver):
             for c in classes:
                 try:
                     element = webdriver.find_element_by_xpath(
-                        "//*[contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {})]".format(
+                        "//*[translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')={}]".format(
                             "'" + c + "'"))
+                    element_type = "class"
                     break
                 except Exception:
                     continue
@@ -283,10 +290,16 @@ def detect_cookie_dialog(visit_id, webdriver):
     openwpm_db = "/home/parallels/Desktop/output/crawl-data.sqlite"
     conn = sqlite3.connect(openwpm_db, timeout=20)
     cur = conn.cursor()
-    cur.execute("INSERT INTO cookie_dialog VALUES (?,?)",
-                (visit_id, found))
+    cur.execute("INSERT INTO cookie_dialog VALUES (?,?,?)",
+                (visit_id, found, element_type))
     conn.commit()
     conn.close()
+
+
+def disable_javascript(visit_id, webdriver):
+    options = Options()
+    options.preferences.update({'javascript.enabled': False})
+
 
 
 def _stitch_screenshot_parts(visit_id, browser_id, manager_params):

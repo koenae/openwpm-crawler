@@ -12,7 +12,8 @@ from .Types import (
     SaveScreenshotCommand,
     ScreenshotFullPageCommand,
     PingCmpCommand,
-    DetectCookieDialogCommand
+    DetectCookieDialogCommand,
+    DisableJavaScriptCommand
 )
 
 
@@ -44,6 +45,12 @@ def execute_command(
 
     elif type(command) is DetectCookieDialogCommand:
         browser_commands.detect_cookie_dialog(
+            visit_id=command.visit_id,
+            webdriver=webdriver,
+        )
+
+    elif type(command) is DisableJavaScriptCommand:
+        browser_commands.dis(
             visit_id=command.visit_id,
             webdriver=webdriver,
         )

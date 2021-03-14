@@ -3,7 +3,7 @@ import csv
 import time
 
 # The list of sites that we wish to crawl
-NUM_BROWSERS = 1
+NUM_BROWSERS = 2
 sites = []
 with open("dataset.csv") as csvfile:
     reader = csv.reader(csvfile, quoting=csv.QUOTE_NONE)

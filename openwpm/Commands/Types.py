@@ -124,3 +124,11 @@ class DetectCookieDialogCommand(BaseCommand):
 
     def __repr__(self):
         return "DetectCookieDialogCommand()"
+
+
+class DisableJavaScriptCommand(BaseCommand):
+    def __init__(self, sleep):
+        self.sleep = sleep
+
+    def __repr__(self):
+        return "DisableJavaScriptCommand()"

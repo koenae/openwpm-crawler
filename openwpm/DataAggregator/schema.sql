@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS ping_cmp (
 
 CREATE TABLE IF NOT EXISTS cookie_dialog (
     visit_id INTEGER PRIMARY KEY,
-    has_dialog INTEGER);
+    has_dialog INTEGER,
+    element_type TEXT);
 
 /*
 # site_visits

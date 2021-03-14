@@ -14,6 +14,7 @@ from .Commands.Types import (
     ScreenshotFullPageCommand,
     PingCmpCommand,
     DetectCookieDialogCommand,
+    DisableJavaScriptCommand
 )
 from .Errors import CommandExecutionError
 
@@ -204,8 +205,16 @@ class CommandSequence:
         self.total_timeout += timeout
         if not self.contains_get_or_browse:
             raise CommandExecutionError("No get or browse request preceding "
-                                        "the jiggle_mouse command", self)
+                                        "the detect_cookie_dialog command", self)
         command = DetectCookieDialogCommand(sleep)
+        self._commands_with_timeout.append((command, timeout))
+
+    def disable_javascript(self, sleep=0, timeout=60):
+        self.total_timeout += timeout
+        if not self.contains_get_or_browse:
+            raise CommandExecutionError("No get or browse request preceding "
+                                        "the disable_javascript command", self)
+        command = DisableJavaScriptCommand(sleep)
         self._commands_with_timeout.append((command, timeout))
 
     def mark_done(self, success: bool):
