@@ -57,7 +57,7 @@ def deploy_firefox(status_queue, browser_params, manager_params, crash_recovery)
     # https://github.com/SeleniumHQ/selenium/issues/2106#issuecomment-320238039
     fo = Options()
 
-    fo.set_preference('javascript.enabled', False)
+    # fo.set_preference('javascript.enabled', False)
 
     if browser_params["seed_tar"] and not crash_recovery:
         logger.info(

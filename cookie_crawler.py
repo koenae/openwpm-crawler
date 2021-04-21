@@ -1,11 +1,9 @@
 from openwpm import CommandSequence, TaskManager
 import csv
-import time
 
-# The list of sites that we wish to crawl
-NUM_BROWSERS = 2
+NUM_BROWSERS = 3
 sites = []
-with open("dataset.csv") as csvfile:
+with open("datasets/tranco_top500_fr.csv") as csvfile:
     reader = csv.reader(csvfile, quoting=csv.QUOTE_NONE)
     for row in reader:
         element = row[1]
@@ -15,15 +13,6 @@ with open("dataset.csv") as csvfile:
             element = "http://www." + element
         sites.append(element)
 
-# sites = [
-#     "http://www.example.com",
-#     "http://www.princeton.edu",
-#     "http://citp.princeton.edu/",
-# ]
-
-# Loads the default manager params
-
-# and NUM_BROWSERS copies of the default browser params
 manager_params, browser_params = TaskManager.load_default_params(NUM_BROWSERS)
 
 # Update browser configuration (use this for per-browser settings)
@@ -31,7 +20,7 @@ for i in range(NUM_BROWSERS):
     # Record HTTP Requests and Responses
     browser_params[i]["http_instrument"] = False
     # Record cookie changes
-    browser_params[i]["cookie_instrument"] = False
+    browser_params[i]["cookie_instrument"] = True
     # Record Navigations
     browser_params[i]["navigation_instrument"] = False
     # Record JS Web API calls
@@ -41,21 +30,20 @@ for i in range(NUM_BROWSERS):
     # Record DNS resolution
     browser_params[i]["dns_instrument"] = False
     # browser_params[i]["save_content"] = "script"
+    browser_params[i]["bot_mitigation"] = True
 
 # Launch only browser 0 headless
-browser_params[0]["display_mode"] = "native"
+# browser_params[0]["display_mode"] = "native"
 
 # Update TaskManager configuration (use this for crawl-wide settings)
-manager_params["data_directory"] = "~/Desktop/output/"
-manager_params["log_directory"] = "~/Desktop/output/"
+manager_params["data_directory"] = "~/Desktop/output/france/"
+manager_params["log_directory"] = "~/Desktop/output/france/"
 manager_params["memory_watchdog"] = True
 manager_params["process_watchdog"] = True
 
 # Instantiates the measurement platform
 # Commands time out by default after 60 seconds
 manager = TaskManager.TaskManager(manager_params, browser_params)
-
-start = time.process_time()
 
 # Visits the sites
 for site in sites:
@@ -67,18 +55,12 @@ for site in sites:
     )
 
     # Start by visiting the page
-    command_sequence.get(sleep=3, timeout=60)
-    # command_sequence.ping_cmp(sleep=3, timeout=60)
-    command_sequence.detect_cookie_dialog(sleep=3, timeout=60)
+    command_sequence.get(sleep=3, timeout=300)
+    command_sequence.ping_cmp(sleep=3, timeout=300)
+    command_sequence.detect_cookie_dialog(sleep=3, timeout=300)
 
     # Run commands across the three browsers (simple parallelization)
     manager.execute_command_sequence(command_sequence)
 
-end = time.process_time()
-print("process time {}".format(end - start))
-
 # Shuts down the browsers and waits for the data to finish logging
 manager.close()
-
-
-

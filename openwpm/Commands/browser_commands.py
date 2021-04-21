@@ -204,25 +204,28 @@ def save_screenshot(visit_id, browser_id, driver, manager_params, suffix=""):
 
 def ping_cmp(visit_id, webdriver):
     tc_data = webdriver.execute_script(
-        "let result; "
+        "let result = null; "
         "if (typeof __tcfapi == 'function') { "
         "   window.__tcfapi('ping', 2, function(tcData, success) { "
-        "       result = tcData; "
+        "       result = Object.assign({}, tcData); "
         "   }); "
         "} "
         "return result;")
 
     if tc_data is not None:
         cmp_name = ""
-        with open("cmplist.json") as json_file:
-            data = json.load(json_file)
-            for key, value in data["cmps"].items():
-                if int(key) == tc_data["cmpId"]:
-                    cmp_name = value["name"]
-                    break
-        openwpm_db = "/home/parallels/Desktop/output/crawl-data.sqlite"
-        conn = sqlite3.connect(openwpm_db, timeout=10)
+        if "cmpId" in tc_data.keys():
+            with open("cmplist.json") as json_file:
+                data = json.load(json_file)
+                for key, value in data["cmps"].items():
+                    if int(key) == tc_data["cmpId"]:
+                        cmp_name = value["name"]
+                        break
+        openwpm_db = "/home/parallels/Desktop/output/france/crawl-data.sqlite"
+        # openwpm_db = "/opt/Desktop/output/crawl-data.sqlite"
+        conn = sqlite3.connect(openwpm_db, timeout=300)
         cur = conn.cursor()
+        cur.execute("pragma journal_mode=wal3")
         cur.execute("INSERT INTO ping_cmp VALUES (?,?,?,?,?)",
                     (visit_id, tc_data["cmpId"], cmp_name, tc_data["tcfPolicyVersion"], tc_data["gdprApplies"]))
         conn.commit()
@@ -287,9 +290,11 @@ def detect_cookie_dialog(visit_id, webdriver):
     if element is not None:
         found = 1
 
-    openwpm_db = "/home/parallels/Desktop/output/crawl-data.sqlite"
-    conn = sqlite3.connect(openwpm_db, timeout=20)
+    openwpm_db = "/home/parallels/Desktop/output/france/crawl-data.sqlite"
+    # openwpm_db = "/opt/Desktop/output/crawl-data.sqlite"
+    conn = sqlite3.connect(openwpm_db, timeout=300)
     cur = conn.cursor()
+    cur.execute("pragma journal_mode=wal3")
     cur.execute("INSERT INTO cookie_dialog VALUES (?,?,?)",
                 (visit_id, found, element_type))
     conn.commit()
@@ -299,7 +304,6 @@ def detect_cookie_dialog(visit_id, webdriver):
 def disable_javascript(visit_id, webdriver):
     options = Options()
     options.preferences.update({'javascript.enabled': False})
-
 
 
 def _stitch_screenshot_parts(visit_id, browser_id, manager_params):
