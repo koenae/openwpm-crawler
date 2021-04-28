@@ -14,6 +14,7 @@ from .Commands.Types import (
     ScreenshotFullPageCommand,
     PingCmpCommand,
     DetectCookieDialogCommand,
+    DetectDarkPatternsCommand,
     DisableJavaScriptCommand
 )
 from .Errors import CommandExecutionError
@@ -199,6 +200,14 @@ class CommandSequence:
             raise CommandExecutionError("No get or browse request preceding "
                                         "the jiggle_mouse command", self)
         command = PingCmpCommand(sleep)
+        self._commands_with_timeout.append((command, timeout))
+
+    def detect_dark_patterns(self, sleep=0, timeout=60):
+        self.total_timeout += timeout
+        if not self.contains_get_or_browse:
+            raise CommandExecutionError("No get or browse request preceding "
+                                        "the jiggle_mouse command", self)
+        command = DetectDarkPatternsCommand(sleep)
         self._commands_with_timeout.append((command, timeout))
 
     def detect_cookie_dialog(self, sleep=0, timeout=60):

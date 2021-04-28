@@ -1,9 +1,9 @@
 from openwpm import CommandSequence, TaskManager
 import csv
 
-NUM_BROWSERS = 3
+NUM_BROWSERS = 1
 sites = []
-with open("datasets/tranco_top500_fr.csv") as csvfile:
+with open("dataset.csv") as csvfile:
     reader = csv.reader(csvfile, quoting=csv.QUOTE_NONE)
     for row in reader:
         element = row[1]
@@ -30,14 +30,13 @@ for i in range(NUM_BROWSERS):
     # Record DNS resolution
     browser_params[i]["dns_instrument"] = False
     # browser_params[i]["save_content"] = "script"
-    browser_params[i]["bot_mitigation"] = True
 
 # Launch only browser 0 headless
 # browser_params[0]["display_mode"] = "native"
 
 # Update TaskManager configuration (use this for crawl-wide settings)
-manager_params["data_directory"] = "~/Desktop/output/france/"
-manager_params["log_directory"] = "~/Desktop/output/france/"
+manager_params["data_directory"] = "~/Desktop/output/test/"
+manager_params["log_directory"] = "~/Desktop/output/test/"
 manager_params["memory_watchdog"] = True
 manager_params["process_watchdog"] = True
 
@@ -56,8 +55,9 @@ for site in sites:
 
     # Start by visiting the page
     command_sequence.get(sleep=3, timeout=300)
-    command_sequence.ping_cmp(sleep=3, timeout=300)
-    command_sequence.detect_cookie_dialog(sleep=3, timeout=300)
+    command_sequence.detect_dark_patterns(sleep=3, timeout=300)
+    # command_sequence.ping_cmp(sleep=3, timeout=300)
+    # command_sequence.detect_cookie_dialog(sleep=3, timeout=300)
 
     # Run commands across the three browsers (simple parallelization)
     manager.execute_command_sequence(command_sequence)

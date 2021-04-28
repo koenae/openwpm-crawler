@@ -202,6 +202,37 @@ def save_screenshot(visit_id, browser_id, driver, manager_params, suffix=""):
     driver.save_screenshot(outname)
 
 
+def detect_dark_patterns(visit_id, webdriver):
+    element = None
+
+    with open("allow_buttons.txt") as f:
+        buttons = f.read().splitlines()
+
+    for b in buttons:
+        try:
+            element = webdriver.find_element_by_xpath(
+                "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),{})]".format(
+                    "'" + b + "'"))
+            break
+        except Exception:
+            continue
+
+    if element is not None:
+        allow_button_exists = 1
+    else:
+        return
+
+    openwpm_db = "/home/parallels/Desktop/output/test/crawl-data.sqlite"
+    # openwpm_db = "/opt/Desktop/output/crawl-data.sqlite"
+    conn = sqlite3.connect(openwpm_db, timeout=300)
+    cur = conn.cursor()
+    cur.execute("pragma journal_mode=wal3")
+    cur.execute("INSERT INTO dark_patterns VALUES (?,?,?,?)",
+                (visit_id, allow_button_exists, element.size["width"], element.size["height"]))
+    conn.commit()
+    conn.close()
+
+
 def ping_cmp(visit_id, webdriver):
     tc_data = webdriver.execute_script(
         "let result = null; "
@@ -221,7 +252,7 @@ def ping_cmp(visit_id, webdriver):
                     if int(key) == tc_data["cmpId"]:
                         cmp_name = value["name"]
                         break
-        openwpm_db = "/home/parallels/Desktop/output/france/crawl-data.sqlite"
+        openwpm_db = "/home/parallels/Desktop/output/test/crawl-data.sqlite"
         # openwpm_db = "/opt/Desktop/output/crawl-data.sqlite"
         conn = sqlite3.connect(openwpm_db, timeout=300)
         cur = conn.cursor()
@@ -290,7 +321,7 @@ def detect_cookie_dialog(visit_id, webdriver):
     if element is not None:
         found = 1
 
-    openwpm_db = "/home/parallels/Desktop/output/france/crawl-data.sqlite"
+    openwpm_db = "/home/parallels/Desktop/output/test/crawl-data.sqlite"
     # openwpm_db = "/opt/Desktop/output/crawl-data.sqlite"
     conn = sqlite3.connect(openwpm_db, timeout=300)
     cur = conn.cursor()

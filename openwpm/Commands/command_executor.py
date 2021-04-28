@@ -13,6 +13,7 @@ from .Types import (
     ScreenshotFullPageCommand,
     PingCmpCommand,
     DetectCookieDialogCommand,
+    DetectDarkPatternsCommand,
     DisableJavaScriptCommand
 )
 
@@ -39,6 +40,12 @@ def execute_command(
 
     elif type(command) is PingCmpCommand:
         browser_commands.ping_cmp(
+            visit_id=command.visit_id,
+            webdriver=webdriver,
+        )
+
+    elif type(command) is DetectDarkPatternsCommand:
+        browser_commands.detect_dark_patterns(
             visit_id=command.visit_id,
             webdriver=webdriver,
         )
