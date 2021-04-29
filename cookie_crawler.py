@@ -1,7 +1,7 @@
 from openwpm import CommandSequence, TaskManager
 import csv
 
-NUM_BROWSERS = 1
+NUM_BROWSERS = 3
 sites = []
 with open("dataset.csv") as csvfile:
     reader = csv.reader(csvfile, quoting=csv.QUOTE_NONE)

@@ -210,12 +210,93 @@ def detect_dark_patterns(visit_id, webdriver):
 
     for b in buttons:
         try:
-            element = webdriver.find_element_by_xpath(
-                "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),{})]".format(
-                    "'" + b + "'"))
-            break
+            elements = webdriver.find_elements_by_xpath(
+                "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value}) or "
+                "contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'ok ') or "
+                "contains(translate(@aria-label, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value}) and "
+                "not("
+                "contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'niet') or "
+                "contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'not')"
+                ")]|"
+                "//button[normalize-space(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'))='ok']|"
+                "//a[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'ok ') or "
+                "contains(translate(.,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'), {value}) and "
+                "not("
+                "contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'niet') or "
+                "contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'not')"
+                ")]|"
+                "//a[normalize-space(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'))='ok']|"
+                "//span[contains(@class,'a-button-inner') and "
+                "contains(translate(.,'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]|"
+                "//div[contains(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]|"
+                "//input[contains(translate(@value,'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]"
+                    .format(value="'" + b + "'"))
+
+            if elements is not None and len(elements) > 0:
+                for e in elements:
+                    if e.size["width"] != 0 and e.size["height"] != 0:
+                        element = e
+                        break
+                    else:
+                        continue
+                if element is not None:
+                    break
+            else:
+                continue
         except Exception:
             continue
+
+    if element is None:
+        iframe = None
+        try:
+            frames = webdriver.find_elements_by_tag_name("iframe")
+            for frame in frames:
+                matches = ["cmp", "consent"]
+                if any(x in frame.get_attribute("src") for x in matches):
+                    iframe = frame
+                    break
+            if len(frames) > 0 and iframe is None:
+                iframe = frames[0]
+            if iframe is not None:
+                webdriver.switch_to.frame(iframe)
+                for b in buttons:
+                    try:
+                        elements = webdriver.find_elements_by_xpath(
+                            "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value}) or "
+                            "contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'ok ') or "
+                            "contains(translate(@aria-label, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value}) and "
+                            "not("
+                            "contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'niet') or "
+                            "contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'not')"
+                            ")]|"
+                            "//button[normalize-space(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'))='ok']|"
+                            "//a[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'ok ') or "
+                            "contains(translate(.,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'), {value}) and "
+                            "not("
+                            "contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'niet') or "
+                            "contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'not')"
+                            ")]|"
+                            "//a[normalize-space(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'))='ok']|"
+                            "//span[contains(@class,'a-button-inner') and "
+                            "contains(translate(.,'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]|"
+                            "//div[contains(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]|"
+                            "//input[contains(translate(@value,'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]"
+                                .format(value="'" + b + "'"))
+                        if elements is not None and len(elements) > 0:
+                            for e in elements:
+                                if e.size["width"] != 0 and e.size["height"] != 0:
+                                    element = e
+                                    break
+                                else:
+                                    continue
+                            if element is not None:
+                                break
+                        else:
+                            continue
+                    except Exception:
+                        continue
+        except Exception:
+            pass
 
     if element is not None:
         allow_button_exists = 1
@@ -228,7 +309,7 @@ def detect_dark_patterns(visit_id, webdriver):
     cur = conn.cursor()
     cur.execute("pragma journal_mode=wal3")
     cur.execute("INSERT INTO dark_patterns VALUES (?,?,?,?)",
-                (visit_id, allow_button_exists, element.size["width"], element.size["height"]))
+                (visit_id, allow_button_exists, round(element.size["width"]), round(element.size["height"])))
     conn.commit()
     conn.close()
 
