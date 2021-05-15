@@ -32,8 +32,13 @@ CREATE TABLE IF NOT EXISTS cookie_dialog (
 CREATE TABLE IF NOT EXISTS dark_patterns (
     visit_id INTEGER PRIMARY KEY,
     allow_button_exists INTEGER,
-    width INTEGER,
-    height INTEGER);
+    allow_button_width INTEGER,
+    allow_button_height INTEGER,
+    allow_button_rgb TEXT,
+    reject_button_exists INTEGER,
+    reject_button_height INTEGER,
+    reject_button_width INTEGER,
+    reject_button_rgb TEXT);
 
 /*
 # site_visits

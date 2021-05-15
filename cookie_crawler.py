@@ -3,7 +3,7 @@ import csv
 
 NUM_BROWSERS = 3
 sites = []
-with open("dataset.csv") as csvfile:
+with open("datasets/tranco_ZL8G_nl.csv") as csvfile:
     reader = csv.reader(csvfile, quoting=csv.QUOTE_NONE)
     for row in reader:
         element = row[1]
@@ -20,7 +20,7 @@ for i in range(NUM_BROWSERS):
     # Record HTTP Requests and Responses
     browser_params[i]["http_instrument"] = False
     # Record cookie changes
-    browser_params[i]["cookie_instrument"] = True
+    browser_params[i]["cookie_instrument"] = False
     # Record Navigations
     browser_params[i]["navigation_instrument"] = False
     # Record JS Web API calls
@@ -35,8 +35,8 @@ for i in range(NUM_BROWSERS):
 # browser_params[0]["display_mode"] = "native"
 
 # Update TaskManager configuration (use this for crawl-wide settings)
-manager_params["data_directory"] = "~/Desktop/output/test/"
-manager_params["log_directory"] = "~/Desktop/output/test/"
+manager_params["data_directory"] = "~/Desktop/output/"
+manager_params["log_directory"] = "~/Desktop/output/"
 manager_params["memory_watchdog"] = True
 manager_params["process_watchdog"] = True
 
@@ -55,9 +55,9 @@ for site in sites:
 
     # Start by visiting the page
     command_sequence.get(sleep=3, timeout=300)
-    command_sequence.detect_dark_patterns(sleep=3, timeout=300)
+    # command_sequence.detect_dark_patterns(sleep=3, timeout=300)
     # command_sequence.ping_cmp(sleep=3, timeout=300)
-    # command_sequence.detect_cookie_dialog(sleep=3, timeout=300)
+    command_sequence.detect_cookie_dialog(sleep=3, timeout=300)
 
     # Run commands across the three browsers (simple parallelization)
     manager.execute_command_sequence(command_sequence)
