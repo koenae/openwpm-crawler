@@ -3,7 +3,7 @@ import csv
 
 NUM_BROWSERS = 3
 sites = []
-with open("datasets/tranco_ZL8G_nl.csv") as csvfile:
+with open("dataset.csv") as csvfile:
     reader = csv.reader(csvfile, quoting=csv.QUOTE_NONE)
     for row in reader:
         element = row[1]
@@ -55,9 +55,9 @@ for site in sites:
 
     # Start by visiting the page
     command_sequence.get(sleep=3, timeout=300)
-    # command_sequence.detect_dark_patterns(sleep=3, timeout=300)
+    command_sequence.detect_dark_patterns(sleep=3, timeout=300)
     # command_sequence.ping_cmp(sleep=3, timeout=300)
-    command_sequence.detect_cookie_dialog(sleep=3, timeout=300)
+    # command_sequence.detect_cookie_dialog(sleep=3, timeout=300)
 
     # Run commands across the three browsers (simple parallelization)
     manager.execute_command_sequence(command_sequence)

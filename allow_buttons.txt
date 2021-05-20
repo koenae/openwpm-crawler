@@ -2,7 +2,7 @@ akkoord
 accepteer
 toestaan
 accepteren
-accept
+aanvaard
 aanvaarden
 prima
 oké
