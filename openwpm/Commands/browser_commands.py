@@ -193,13 +193,19 @@ def browse_website(
 
 
 def convert_rgb_to_hex(rgb):
-    print(rgb)
     if rgb is None or rgb == "rgba(0, 0, 0, 0)":
-        print("in de if")
         return
-    r, g, b = map(int, re.search(
-        r'rgb\((\d+),\s*(\d+),\s*(\d+)', rgb).groups())
-    return '#%02x%02x%02x' % (r, g, b)
+    result = re.search(r'rgb\((\d+),\s*(\d+),\s*(\d+)', rgb)
+    if result is not None:
+        r, g, b = map(int, result.groups())
+        return '#%02x%02x%02x' % (r, g, b)
+
+    result = re.search(r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)', rgb)
+    if result is not None:
+        r, g, b, a = map(int, result.groups())
+        return '#%02x%02x%02x%02x' % (r, g, b, a)
+
+    return
 
 
 def save_screenshot(visit_id, browser_id, driver, manager_params, suffix=""):
@@ -215,16 +221,16 @@ def save_screenshot(visit_id, browser_id, driver, manager_params, suffix=""):
 
 
 def check_html_elements(webdriver, buttons, language, reject=False):
-    translator = google_translator()
+    # translator = google_translator()
     elements = None
 
+    print(buttons)
+
     for b in buttons:
-        # lang = translator.detect(b)
-        # print(lang)
-        # print(b)
         try:
-            #if lang is not None and len(lang) > 0 and lang[0] != "nl" and lang[0] != "af":
-            translation = translator.translate(b, lang_src="nl", lang_tgt=language)
+            # 429 (Too Many Requests) from TTS API. Probable cause: Unknown
+            # https://github.com/lushan88a/google_trans_new/issues/28
+            # translation = translator.translate(b, lang_src="nl", lang_tgt=language)
             if reject:
                 elements = webdriver.find_elements_by_xpath(
                     "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value}) or "
@@ -234,10 +240,10 @@ def check_html_elements(webdriver, buttons, language, reject=False):
                     "contains(translate(.,'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]|"
                     "//input[contains(translate(@value,'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]"
                         .format(
-                        value="'" + translation.strip() + "'" if translation is not None and translation != "" else "'" + b + "'"))
+                        value="'" + b + "'"))
                 if elements is None or len(elements) == 0:
                     elements = webdriver.find_elements_by_xpath("//div[string-length(.) < 20 and contains(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]"
-                        .format(value="'" + translation.strip() + "'" if translation is not None and translation != "" else "'" + b + "'"))
+                        .format(value="'" + b + "'"))
             else:
                 elements = webdriver.find_elements_by_xpath(
                     "//button[(contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value}) or "
@@ -259,10 +265,10 @@ def check_html_elements(webdriver, buttons, language, reject=False):
                     "contains(translate(.,'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]|"
                     "//input[contains(translate(@value,'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]"
                         .format(
-                        value="'" + translation.strip() + "'" if translation is not None and translation != "" else "'" + b + "'"))
+                        value="'" + b + "'"))
                 if elements is None or len(elements) == 0:
                     elements = webdriver.find_elements_by_xpath("//div[string-length(.) < 20 and contains(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]"
-                        .format(value="'" + translation.strip() + "'" if translation is not None and translation != "" else "'" + b + "'"))
+                        .format(value="'" + b + "'"))
             if elements is not None and len(elements) > 0:
                 for e in elements:
                     if e.size["width"] != 0 and e.size["height"] != 0:
@@ -278,10 +284,11 @@ def check_html_elements(webdriver, buttons, language, reject=False):
                     break
             else:
                 continue
-        except Exception:
+        except Exception as err:
+            print(err)
             continue
 
-    if not reject and elements is None or len(elements) == 0:
+    if not reject and (elements is None or len(elements) == 0):
         elements = webdriver.find_elements_by_xpath(
             "//button[normalize-space(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'))='ok' and "
             "not("
@@ -313,7 +320,7 @@ def check_html_elements(webdriver, buttons, language, reject=False):
 
 def check_iframes(webdriver, buttons, language, reject=False):
     iframe = None
-    translator = google_translator()
+    # translator = google_translator()
     elements = None
 
     try:
@@ -332,7 +339,7 @@ def check_iframes(webdriver, buttons, language, reject=False):
                 try:
                     # lang = translator.detect(b)
                     #if lang is not None and len(lang) > 0 and lang[0] != "nl" and lang[0] != "af":
-                    translation = translator.translate(b, lang_src="nl", lang_tgt=language)
+                    # translation = translator.translate(b, lang_src="nl", lang_tgt=language)
                     if reject:
                         elements = webdriver.find_elements_by_xpath(
                             "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value}) or "
@@ -342,12 +349,12 @@ def check_iframes(webdriver, buttons, language, reject=False):
                             "contains(translate(.,'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]|"
                             "//input[contains(translate(@value,'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]"
                                 .format(
-                                value="'" + translation.strip() + "'" if translation is not None and translation != "" else "'" + b + "'"))
+                                value="'" + b + "'"))
                         if elements is None or len(elements) == 0:
                             elements = webdriver.find_elements_by_xpath(
                                 "//div[string-length(.) < 20 and contains(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]"
                                 .format(
-                                    value="'" + translation.strip() + "'" if translation is not None and translation != "" else "'" + b + "'"))
+                                    value="'" + b + "'"))
                     else:
                         elements = webdriver.find_elements_by_xpath(
                             "//button[(contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value}) or "
@@ -369,12 +376,12 @@ def check_iframes(webdriver, buttons, language, reject=False):
                             "contains(translate(.,'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]|"
                             "//input[contains(translate(@value,'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]"
                                 .format(
-                                value="'" + translation.strip() + "'" if translation is not None and translation != "" else "'" + b + "'"))
+                                value="'" + b + "'"))
                         if elements is None or len(elements) == 0:
                             elements = webdriver.find_elements_by_xpath(
                                 "//div[string-length(.) < 20 and contains(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), {value})]"
                                 .format(
-                                    value="'" + translation.strip() + "'" if translation is not None and translation != "" else "'" + b + "'"))
+                                    value="'" + b + "'"))
                     if elements is not None and len(elements) > 0:
                         for e in elements:
                             if e.size["width"] != 0 and e.size["height"] != 0:
@@ -393,7 +400,7 @@ def check_iframes(webdriver, buttons, language, reject=False):
                 except Exception:
                     continue
 
-            if not reject and elements is None or len(elements) == 0:
+            if not reject and (elements is None or len(elements) == 0):
                 elements = webdriver.find_elements_by_xpath(
                     "//button[normalize-space(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'))='ok' and "
                     "not("
@@ -432,6 +439,8 @@ def detect_dark_patterns(visit_id, webdriver):
     with open("reject_buttons.txt") as f:
         reject_buttons = f.read().splitlines()
 
+    print("Dit is een test")
+
     allow_element = check_html_elements(webdriver, allow_buttons, "nl")
     if allow_element is None:
         allow_element = check_iframes(webdriver, allow_buttons, "nl")
@@ -469,13 +478,6 @@ def detect_dark_patterns(visit_id, webdriver):
     conn = sqlite3.connect(openwpm_db, timeout=300)
     cur = conn.cursor()
     cur.execute("pragma journal_mode=wal3")
-    # cur.execute("INSERT INTO dark_patterns VALUES (?,?,?,?,?,?,?,?,?)",
-    #             (visit_id,
-    #              allow_button_exists,
-    #              round(allow_element.size["width"]) if allow_element is not None else 0,
-    #              round(allow_element.size["height"]) if allow_element is not None else 0,
-    #              allow_element.value_of_css_property("background-color") if allow_element is not None else 0,
-    #              0, 0, 0, 0))
     cur.execute("INSERT INTO dark_patterns VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (visit_id,
                  allow_button_exists,

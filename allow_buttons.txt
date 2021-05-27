@@ -6,3 +6,11 @@ aanvaard
 aanvaarden
 prima
 oké
+agreement
+accept
+to allow
+accept
+accepted
+accept
+fine
+okay
