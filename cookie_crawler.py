@@ -55,7 +55,7 @@ for site in sites:
 
     # Start by visiting the page
     command_sequence.get(sleep=3, timeout=300)
-    command_sequence.detect_dark_patterns(sleep=3, timeout=300)
+    command_sequence.detect_dark_patterns(sleep=3, timeout=300, languages=["nl"])
     # command_sequence.ping_cmp(sleep=3, timeout=300)
     # command_sequence.detect_cookie_dialog(sleep=3, timeout=300)
 

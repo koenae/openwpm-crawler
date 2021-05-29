@@ -119,8 +119,9 @@ class PingCmpCommand(BaseCommand):
 
 
 class DetectDarkPatternsCommand(BaseCommand):
-    def __init__(self, sleep):
+    def __init__(self, sleep, languages):
         self.sleep = sleep
+        self.languages = languages
 
     def __repr__(self):
         return "DetectDarkPatternsCommand()"

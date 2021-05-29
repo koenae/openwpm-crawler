@@ -48,6 +48,7 @@ def execute_command(
         browser_commands.detect_dark_patterns(
             visit_id=command.visit_id,
             webdriver=webdriver,
+            languages=command.languages,
         )
 
     elif type(command) is DetectCookieDialogCommand:

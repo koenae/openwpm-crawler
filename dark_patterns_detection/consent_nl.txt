@@ -5,12 +5,14 @@ accepteren
 aanvaard
 aanvaarden
 prima
+stem toe
 oké
-agreement
-accept
-to allow
+toestemming
+agree
+allow
 accept
 accepted
-accept
 fine
 okay
+grant
+consent
