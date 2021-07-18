@@ -193,6 +193,15 @@ def deploy_firefox(status_queue, browser_params, manager_params, crash_recovery)
             % browser_params["browser_id"]
         )
 
+    # Install extension
+    # ext_loc = os.path.join(root_dir, "../Extension/firefox/uBlock.xpi")
+    # ext_loc = os.path.normpath(ext_loc)
+    # driver.install_addon(ext_loc, temporary=True)
+    # logger.info(
+    #     "BROWSER %i: ublock extension loaded"
+    #     % browser_params["browser_id"]
+    # )
+
     # set window size
     driver.set_window_size(*DEFAULT_SCREEN_RES)
 
